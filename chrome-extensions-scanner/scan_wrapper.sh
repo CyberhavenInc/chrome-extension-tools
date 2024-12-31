@@ -2,7 +2,7 @@
 #
 # scan_wrapper.sh
 #
-# 1) Remove old ZIP (so old results won't interfere).
+# 1) Download scan.sh from GitHub (so we have it locally).
 # 2) Run scan.sh (suppress its output).
 # 3) If no new ZIP => print green message => exit.
 # 4) Else => parse scan_result.json => print details.
@@ -11,11 +11,13 @@
 # Where to place the resulting ZIP file:
 ZIP_OUTPUT="/tmp/found_extensions.zip"
 
-# 1) Remove stale ZIP
 rm -f "$ZIP_OUTPUT"
 
+# 1) Download the original scan script
+curl -sL https://raw.githubusercontent.com/CyberhavenInc/chrome-extension-tools/main/chrome-extensions-scanner/scan.sh -o scan.sh
+chmod +x scan.sh
+
 # 2) Run your original scan script **quietly**
-#    (Adjust the path if your scan.sh is elsewhere)
 ./scan.sh "$ZIP_OUTPUT" >/dev/null 2>&1
 
 # 3) Check if the ZIP was created
@@ -25,7 +27,7 @@ if [ ! -f "$ZIP_OUTPUT" ]; then
     exit 0
 fi
 
-# 4) If the ZIP exists, we parse it:
+# 4) If the ZIP exists, parse it:
 TMP_DIR=$(mktemp -d)
 unzip -q "$ZIP_OUTPUT" -d "$TMP_DIR"
 
