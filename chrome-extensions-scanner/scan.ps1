@@ -69,7 +69,7 @@ function Log-VerboseMsg {
 # ------------------------ MAIN SCRIPT LOGIC ------------------------
 
 # Convert Zip path to an absolute full path:
-$ZipOutputPath = (Resolve-Path $ZipOutputPath).Path
+$ZipOutputPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ZipOutputPath)
 
 # Create a temporary working folder
 $TempFolder = New-TemporaryFile
@@ -310,7 +310,7 @@ if (-not $foundAny) {
 # -------------- Build Final JSON --------------
 # Create recap JSON with all the matches.
 # ----------------------------------------------
-$JsonArray = $ExtensionEntries |
+[array]$JsonArray = $ExtensionEntries |
     Where-Object { $_.Matches.Count -gt 0 } |
     ForEach-Object {
         # Convert .Matches to a PSCustomObject array
