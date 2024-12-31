@@ -55,7 +55,7 @@ $SEARCH_STRINGS = @(
     "YWRzL2FkX2xpbWl0cw",
     "cXIvc2hvdy9jb2Rl",
     "ZXh0X21hbmFnZQ",
-    "ZXh0X2xvZw",
+    "ZXh0X2xvZw"
 )
 
 # ------------------------ HELPER FUNCTIONS ------------------------
@@ -69,7 +69,7 @@ function Log-VerboseMsg {
 # ------------------------ MAIN SCRIPT LOGIC ------------------------
 
 # Convert Zip path to an absolute full path:
-$ZipOutputPath = (Resolve-Path $ZipOutputPath).Path
+$ZipOutputPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ZipOutputPath)
 
 # Create a temporary working folder
 $TempFolder = New-TemporaryFile
@@ -310,7 +310,7 @@ if (-not $foundAny) {
 # -------------- Build Final JSON --------------
 # Create recap JSON with all the matches.
 # ----------------------------------------------
-$JsonArray = $ExtensionEntries |
+[array]$JsonArray = $ExtensionEntries |
     Where-Object { $_.Matches.Count -gt 0 } |
     ForEach-Object {
         # Convert .Matches to a PSCustomObject array
