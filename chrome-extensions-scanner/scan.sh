@@ -21,6 +21,11 @@
 #   ./scan.sh -v /path/to/found_extensions.zip
 # ------------------------------------------------------------------------
 
+if ! command -v jq &>/dev/null; then
+    echo "jq is not installed. Please install it with 'brew install jq' and try again."
+    exit 1
+fi
+
 BROWSERS=(
     "Chrome::Library/Application Support/Google/Chrome"
     "Brave::Library/Application Support/BraveSoftware/Brave-Browser"

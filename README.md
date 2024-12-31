@@ -1,6 +1,18 @@
 # chrome-extension-checks
 This repository contains various scripts and resources that assist in the identifying Chrome extension versions, and searching Chrome local storage for potentially malicious entries 
 
+Requirements:
+---
+This script requires jq. If jq isn’t installed, you can install it on macOS using Homebrew:
+
+```
+brew install jq
+```
+
+Check if jq is installed with:
+```
+jq --version
+```
 
 scan_wrapper.sh
 ---
