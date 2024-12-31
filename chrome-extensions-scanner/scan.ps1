@@ -55,7 +55,7 @@ $SEARCH_STRINGS = @(
     "YWRzL2FkX2xpbWl0cw",
     "cXIvc2hvdy9jb2Rl",
     "ZXh0X21hbmFnZQ",
-    "ZXh0X2xvZw",
+    "ZXh0X2xvZw"
 )
 
 # ------------------------ HELPER FUNCTIONS ------------------------
