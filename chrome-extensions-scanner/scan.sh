@@ -21,6 +21,11 @@
 #   ./scan.sh -v /path/to/found_extensions.zip
 # ------------------------------------------------------------------------
 
+if ! command -v jq &>/dev/null; then
+    echo "jq is not installed. Please install it with 'brew install jq' and try again."
+    exit 1
+fi
+
 BROWSERS=(
     "Chrome::Library/Application Support/Google/Chrome"
     "Brave::Library/Application Support/BraveSoftware/Brave-Browser"
@@ -285,7 +290,6 @@ for USER_DIR in "$USER_BASE_DIR"/*; do
                 # -------------------------
                 if [ -d "$DATA_PATH" ]; then
                     while IFS= read -r -d $'\0' f; do
-                        # Retrieve patterns matched from MATCHES_FILE
                         matchedPatterns=()
                         while IFS= read -r line; do
                             matchedPatterns+=("$line")
@@ -319,17 +323,13 @@ for USER_DIR in "$USER_BASE_DIR"/*; do
 
                 FOUND_ANY="yes"
 
-                # ----------------------------
-                # Deduplicate extensionStrings
-                # using sort -u
-                # ----------------------------
+                # Deduplicate extensionStrings using sort -u
                 sortedList=$(printf "%s\n" "${extensionStrings[@]}" | sort -u)
                 uniqueStrings=()
                 while IFS= read -r line; do
                     uniqueStrings+=("$line")
                 done <<<"$sortedList"
 
-                # Format them for printing
                 matchedStrList="[${uniqueStrings[*]}]"
 
                 echo "=> Matched extension: $EXT_ID (user=$USERNAME, browser=$BROWSER_NAME, profile=$PROFILE_NAME)"
@@ -353,12 +353,67 @@ for USER_DIR in "$USER_BASE_DIR"/*; do
                     cp -R "$DATA_PATH/"* "$DEST_DIR/extension_data/" 2>/dev/null
                 fi
 
-                # --------------------------------------------
                 # Extract only extension settings from Preferences
-                # --------------------------------------------
                 if [ -f "$PREFS_SRC" ]; then
                     jq '.extensions.settings // {}' "$PREFS_SRC" \
                         >"$DEST_DIR/extension_settings.json" 2>/dev/null
+                fi
+
+                # ------------------------------------------------
+                # Extract extension name from manifest.json
+                # (including localized names if __MSG_ is used)
+                # ------------------------------------------------
+
+                # 1) Find any manifest.json within a few levels
+                manifestFile="$(find "$CODE_PATH" -type f -name "manifest.json" -maxdepth 5 2>/dev/null | head -n 1)"
+                EXT_NAME=""
+                if [ -n "$manifestFile" ] && [ -f "$manifestFile" ]; then
+                    # parse "name" and "default_locale"
+                    rawName=$(jq -r '.name // empty' "$manifestFile" 2>/dev/null)
+                    defaultLocale=$(jq -r '.default_locale // empty' "$manifestFile" 2>/dev/null)
+
+                    # if rawName is empty, fallback
+                    if [ -z "$rawName" ]; then
+                        rawName="(no name)"
+                    fi
+
+                    # check if rawName looks like __MSG_key__
+                    if [[ "$rawName" =~ ^__MSG_ ]]; then
+                        # e.g. __MSG_appName__
+                        msg_key=$(echo "$rawName" | sed -E 's/^__MSG_|__$//g')
+
+                        # let's try to find messages.json in the default locale
+                        if [ -n "$defaultLocale" ]; then
+                            # e.g. _locales/en/messages.json
+                            messages_file="$(find "$CODE_PATH" -type f -path "*_locales/$defaultLocale/messages.json" 2>/dev/null | head -n 1)"
+                        fi
+
+                        # if we couldn't find or defaultLocale was empty, fallback to any messages.json
+                        if [ -z "$messages_file" ]; then
+                            messages_file="$(find "$CODE_PATH" -type f -name "messages.json" 2>/dev/null | head -n 1)"
+                        fi
+
+                        # If we found a messages.json, parse the localized name
+                        if [ -n "$messages_file" ]; then
+                            localizedName=$(jq -r --arg key "$msg_key" '.[$key].message // empty' "$messages_file" 2>/dev/null)
+                            if [ -n "$localizedName" ]; then
+                                EXT_NAME="$localizedName"
+                            else
+                                # fallback to rawName if not found
+                                EXT_NAME="$rawName"
+                            fi
+                        else
+                            EXT_NAME="$rawName"
+                        fi
+                    else
+                        # normal name string
+                        EXT_NAME="$rawName"
+                    fi
+                fi
+
+                # if we still have no name
+                if [ -z "$EXT_NAME" ]; then
+                    EXT_NAME="(no name)"
                 fi
 
                 # ----------------------------
@@ -384,6 +439,7 @@ for USER_DIR in "$USER_BASE_DIR"/*; do
   \"browser\": \"$BROWSER_NAME\",
   \"profile\": \"$PROFILE_NAME\",
   \"extensionId\": \"$EXT_ID\",
+  \"extensionName\": \"$EXT_NAME\",
   \"matches\": $matchObjs
 }"
                 if [ -z "$ALL_JSON" ]; then
@@ -396,6 +452,7 @@ for USER_DIR in "$USER_BASE_DIR"/*; do
     done
 done
 
+# If we never set FOUND_ANY to "yes", no matches => no zip
 if [ "$FOUND_ANY" = "no" ]; then
     echo "No matching extensions found after final check. Not creating zip."
     rm -rf "$TMP_DIR"
