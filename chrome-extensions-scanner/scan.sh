@@ -31,6 +31,7 @@ BROWSERS=(
     "Brave::Library/Application Support/BraveSoftware/Brave-Browser"
     "Edge::Library/Application Support/Microsoft Edge"
     "Chromium::Library/Application Support/Chromium"
+    "Arc::Library/Application Support/Arc"
 )
 
 # Strings to search for in extension code/data:
